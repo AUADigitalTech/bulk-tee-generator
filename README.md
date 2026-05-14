@@ -1,1 +1,1 @@
-# bulk-tee-generator
+# A HTML standalone bulk Tee generator
