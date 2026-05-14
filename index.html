@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bulk Tee Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Anton&family=Archivo+Black&family=Oswald:wght@700&family=Playfair+Display:wght@900&family=Abril+Fatface&family=DM+Serif+Display&family=Bungee&family=Space+Grotesk:wght@700&family=Permanent+Marker&family=Caveat:wght@700&family=Fraunces:opsz,wght@9..144,900&family=Orbitron:wght@900&family=Fredoka+One&family=UnifrakturMaguntia&family=Press+Start+2P&family=Cinzel+Decorative:wght@900&family=Rye&family=Rubik+Bubbles&family=Boogaloo&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+:root{--bg:#FAF7F0;--ink:#0a0a0a;--rust:#B84A1F;--mustard:#D4A017;--cream:#F5E6D3;--forest:#2D4F3F;--bd:2px solid #0a0a0a;--p:14px}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Space Grotesk',system-ui,sans-serif;background:var(--bg);color:var(--ink);height:100vh;overflow:hidden;display:flex;flex-direction:column;font-size:13px}
+/* HEADER */
+.hdr{background:var(--ink);color:var(--bg);padding:9px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:var(--bd);flex-shrink:0}
+.hdr h1{font-size:14px;font-weight:700;letter-spacing:3px;text-transform:uppercase}
+.hdr .sub{font-size:10px;opacity:.55;letter-spacing:1px;text-transform:uppercase}
+/* PANELS */
+.panels{display:grid;grid-template-columns:288px 264px 1fr;flex:1;overflow:hidden;min-height:0}
+.panel{display:flex;flex-direction:column;border-right:var(--bd);overflow-y:auto;padding:var(--p);gap:10px}
+.panel:last-child{border-right:none}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--ink)}
+.ptitle{font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--rust);padding-bottom:8px;border-bottom:var(--bd);flex-shrink:0}
+/* LABELS */
+.lbl{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;display:block;margin-bottom:3px}
+.lbl-sub{font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;color:#888;margin-left:4px}
+/* INPUTS */
+input[type=text],textarea,select{width:100%;background:var(--bg);border:var(--bd);padding:7px 10px;font-family:inherit;font-size:12px;color:var(--ink);outline:none;border-radius:0;-webkit-appearance:none}
+input[type=text]:focus,textarea:focus,select:focus{border-color:var(--rust);box-shadow:3px 3px 0 var(--rust)}
+textarea{resize:none;height:150px;font-family:'Courier New',monospace;font-size:11.5px;line-height:1.5}
+select{cursor:pointer}
+/* BUTTONS */
+button{cursor:pointer;font-family:inherit;font-weight:700;border:var(--bd);border-radius:0;padding:7px 13px;font-size:11px;letter-spacing:1px;text-transform:uppercase;background:var(--bg);color:var(--ink);transition:background .1s,color .1s}
+button:hover{background:var(--ink);color:var(--bg)}
+button:active{transform:translate(1px,1px)}
+.btn-gen{background:var(--rust);color:#fff;font-size:13px;padding:11px;width:100%;letter-spacing:2px}
+.btn-gen:hover{background:var(--ink)}
+.btn-zip{background:var(--mustard);color:var(--ink)}
+.btn-zip:hover{background:var(--ink);color:var(--bg)}
+.btn-zip:disabled{opacity:.4;cursor:not-allowed;pointer-events:none}
+/* CONTROL GROUPS */
+.cg{display:flex;flex-direction:column;gap:5px;padding-bottom:10px;border-bottom:1px solid #e4ddd4}
+.cg:last-child{border-bottom:none;padding-bottom:0}
+/* TOGGLES */
+.tg{display:flex}
+.tg button{flex:1;padding:5px 6px;font-size:10px;letter-spacing:.5px;border-right:none}
+.tg button:last-child{border-right:var(--bd)}
+.tg button.on{background:var(--ink);color:var(--bg)}
+/* RANGE */
+input[type=range]{width:100%;accent-color:var(--rust);cursor:pointer;height:3px;margin:2px 0}
+.rrow{display:flex;align-items:center;gap:8px}
+.rval{font-size:11px;font-weight:700;min-width:42px;text-align:right;color:var(--rust);flex-shrink:0}
+/* FONT SELECTOR */
+.font-btn{width:100%;text-align:left;padding:7px 10px;display:flex;justify-content:space-between;align-items:center;font-size:15px;font-weight:400;letter-spacing:0;text-transform:none}
+.font-dd{display:none;width:100%;background:var(--bg);border:var(--bd);border-top:none;max-height:220px;overflow-y:auto}
+.font-opt{padding:7px 12px;cursor:pointer;font-size:16px;font-weight:700;border-bottom:1px solid #e4ddd4;line-height:1.3}
+.font-opt:hover{background:var(--cream)}
+.font-opt.on{background:var(--ink);color:var(--bg)}
+.font-opt:last-child{border-bottom:none}
+/* COLORS */
+.cprow{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.sw{width:26px;height:26px;border:var(--bd);padding:0;cursor:pointer;flex-shrink:0}
+.sw.on{outline:3px solid var(--rust);outline-offset:1px}
+input[type=color]{width:34px;height:26px;border:var(--bd);padding:2px;cursor:pointer;background:var(--bg);border-radius:0}
+/* CHIPS */
+.chips{display:flex;flex-wrap:wrap;gap:5px;min-height:20px}
+.chip{display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border:var(--bd);font-size:10px;cursor:default;background:var(--cream);letter-spacing:.5px;font-weight:600;max-width:220px}
+.chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
+.chip span:hover{color:var(--rust)}
+.chip .x{padding:0 2px;border:none;background:none;color:inherit;font-weight:400;font-size:13px;cursor:pointer;text-transform:none;letter-spacing:0;line-height:1;flex-shrink:0}
+.chip .x:hover{color:var(--rust);background:none}
+/* SAVE ROW */
+.srow{display:flex;gap:6px}
+.srow input{flex:1;min-width:0}
+.srow button{flex-shrink:0}
+/* GRID */
+.ghdr{display:flex;align-items:center;justify-content:space-between;flex-shrink:0;padding-bottom:10px;border-bottom:var(--bd)}
+.gcnt{font-size:11px;font-weight:700;letter-spacing:1px}
+#grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;padding-top:4px}
+/* CARDS */
+.card{border:var(--bd);overflow:hidden;cursor:zoom-in;transition:box-shadow .1s}
+.card:hover{box-shadow:4px 4px 0 var(--ink)}
+@keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.card{animation:fi .25s ease both}
+.cwrap{width:100%;aspect-ratio:5/6;position:relative;overflow:hidden}
+.cwrap canvas{width:100%;height:100%;display:block}
+.cwrap.t{background-image:repeating-conic-gradient(#e2dbd2 0% 25%,#f0ead8 0% 50%);background-size:14px 14px}
+.cwrap.w{background:#fff}.cwrap.b{background:#1a1a1a}
+.cfoot{border-top:var(--bd);padding:5px 8px;display:flex;align-items:center;gap:6px}
+.clbl{font-size:10px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;letter-spacing:.3px}
+.cdl{font-size:9px;padding:3px 7px;flex-shrink:0}
+/* EMPTY */
+.empty{grid-column:1/-1;text-align:center;padding:48px 20px;border:2px dashed #ccc;color:#bbb}
+.empty .ico{font-size:44px;margin-bottom:10px}
+.empty p{font-size:11px;letter-spacing:1px;text-transform:uppercase;line-height:1.7}
+/* MODAL */
+.mover{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:1000;display:none;align-items:center;justify-content:center;padding:20px}
+.mover.show{display:flex}
+.mcont{position:relative;max-width:520px;width:100%}
+.mwrap{border:3px solid #fff}
+.mwrap.t{background-image:repeating-conic-gradient(#444 0% 25%,#2a2a2a 0% 50%);background-size:14px 14px}
+.mwrap.w{background:#fff}.mwrap.b{background:#111}
+.mwrap canvas{width:100%;height:auto;display:block}
+.mcls{position:absolute;top:-14px;right:-14px;width:30px;height:30px;background:var(--rust);color:#fff;border:var(--bd);font-size:16px;display:flex;align-items:center;justify-content:center;padding:0;line-height:1}
+.mdl{margin-top:10px;width:100%;font-size:12px}
+/* LOADING */
+.load{position:fixed;inset:0;background:rgba(250,247,240,.94);z-index:2000;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+.load.show{display:flex}
+.lmsg{font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase}
+.pbar{width:280px;height:7px;border:var(--bd)}
+.pfill{height:100%;background:var(--rust);transition:width .15s}
+/* HINT */
+.hint{font-size:10px;color:#999;line-height:1.6;letter-spacing:.3px}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <h1>⚡ Bulk Tee Generator</h1>
+  <span class="sub">POD Design Tool &mdash; Print-Ready PNGs at 4500×5400px</span>
+</div>
+
+<div class="panels">
+
+<!-- ========= LEFT: TEMPLATE BUILDER ========= -->
+<div class="panel">
+  <div class="ptitle">Template Builder</div>
+
+  <div class="cg">
+    <span class="lbl">Saved Templates</span>
+    <div class="chips" id="chips"></div>
+  </div>
+
+  <div class="cg">
+    <span class="lbl">Load Example</span>
+    <select id="ex-sel" onchange="loadExample(this.value)">
+      <option value="">— pick an example template —</option>
+    </select>
+  </div>
+
+  <div class="cg">
+    <span class="lbl">Template <span id="ph-hint" class="lbl-sub"></span></span>
+    <input type="text" id="tmpl" placeholder="e.g. {hobby} is life" oninput="updateHint()">
+  </div>
+
+  <div class="cg">
+    <span class="lbl">Values <span id="val-hint" class="lbl-sub">(one per line)</span></span>
+    <textarea id="vals" placeholder="hiking&#10;yoga&#10;cooking&#10;gaming"></textarea>
+  </div>
+
+  <div class="cg">
+    <span class="lbl">Save As Template</span>
+    <div class="srow">
+      <input type="text" id="sname" placeholder="Template name...">
+      <button onclick="saveTpl()">Save</button>
+    </div>
+  </div>
+
+  <button class="btn-gen" onclick="generate()">⚡ Generate Designs</button>
+
+  <div class="hint">
+    Use {placeholder} in your template.<br>
+    Multiple placeholders? Use CSV in the values box<br>
+    with a header row matching placeholder names.
+  </div>
+</div>
+
+<!-- ========= MIDDLE: DESIGN CONTROLS ========= -->
+<div class="panel" id="mpanel">
+  <div class="ptitle">Design Controls</div>
+
+  <div class="cg" style="position:relative">
+    <span class="lbl">Font</span>
+    <button class="font-btn" id="fbtn" onclick="toggleDD()">
+      <span id="fprev">Bebas Neue</span><span style="font-family:inherit;font-size:11px">▾</span>
+    </button>
+    <div class="font-dd" id="fdd"></div>
+  </div>
+
+  <div class="cg">
+    <span class="lbl">Text Color</span>
+    <div class="cprow" id="cprow">
+      <button class="sw on" data-c="#0a0a0a" style="background:#0a0a0a" title="Black"></button>
+      <button class="sw" data-c="#FFFFFF" style="background:#FFFFFF" title="White"></button>
+      <button class="sw" data-c="#F5E6D3" style="background:#F5E6D3" title="Cream"></button>
+      <button class="sw" data-c="#B84A1F" style="background:#B84A1F" title="Rust"></button>
+      <button class="sw" data-c="#2D4F3F" style="background:#2D4F3F" title="Forest"></button>
+      <button class="sw" data-c="#D4A017" style="background:#D4A017" title="Mustard"></button>
+      <input type="color" id="cust-c" value="#0a0a0a" title="Custom">
+    </div>
+  </div>
+
+  <div class="cg">
+    <span class="lbl">Background Preview</span>
+    <div class="tg" id="bgtg">
+      <button class="on" data-v="t" onclick="tset('bgtg','bg',this,'t')">Transparent</button>
+      <button data-v="w" onclick="tset('bgtg','bg',this,'w')">White Tee</button>
+      <button data-v="b" onclick="tset('bgtg','bg',this,'b')">Black Tee</button>
+    </div>
+  </div>
+
+  <div class="cg">
+    <span class="lbl">Alignment</span>
+    <div class="tg" id="altg">
+      <button data-v="left" onclick="tset('altg','align',this,'left')">Left</button>
+      <button class="on" data-v="center" onclick="tset('altg','align',this,'center')">Center</button>
+      <button data-v="right" onclick="tset('altg','align',this,'right')">Right</button>
+    </div>
+  </div>
+
+  <div class="cg">
+    <span class="lbl">Line Break Mode</span>
+    <div class="tg" id="lbtg">
+      <button class="on" data-v="single" onclick="tset('lbtg','lineBreak',this,'single')">Single</button>
+      <button data-v="word" onclick="tset('lbtg','lineBreak',this,'word')">Word/Line</button>
+      <button data-v="two" onclick="tset('lbtg','lineBreak',this,'two')">Two-Line</button>
+    </div>
+  </div>
+
+  <div class="cg">
+    <span class="lbl">Letter Spacing</span>
+    <div class="rrow">
+      <input type="range" id="ls-r" min="-4" max="20" value="0" step=".5" oninput="S.letterSpacing=+this.value;document.getElementById('ls-v').textContent=this.value+'px';refresh()">
+      <span class="rval" id="ls-v">0px</span>
+    </div>
+  </div>
+
+  <div class="cg">
+    <span class="lbl">Text Transform</span>
+    <div class="tg" id="trtg">
+      <button class="on" data-v="none" onclick="tset('trtg','transform',this,'none')">None</button>
+      <button data-v="upper" onclick="tset('trtg','transform',this,'upper')">UPPER</button>
+      <button data-v="lower" onclick="tset('trtg','transform',this,'lower')">lower</button>
+    </div>
+  </div>
+
+  <div class="cg">
+    <span class="lbl">Max Text Width</span>
+    <div class="rrow">
+      <input type="range" id="mw-r" min="20" max="100" value="85" oninput="S.maxWidth=+this.value;document.getElementById('mw-v').textContent=this.value+'%';refresh()">
+      <span class="rval" id="mw-v">85%</span>
+    </div>
+  </div>
+
+  <div class="cg">
+    <span class="lbl">Font Size <span class="lbl-sub">(preview px)</span></span>
+    <div class="rrow">
+      <input type="range" id="fs-r" min="10" max="300" value="80" oninput="S.fontSize=+this.value;document.getElementById('fs-v').textContent=this.value;refresh()">
+      <span class="rval" id="fs-v">80</span>
+    </div>
+  </div>
+</div>
+
+<!-- ========= RIGHT: PREVIEW GRID ========= -->
+<div class="panel">
+  <div class="ghdr">
+    <span class="gcnt" id="gcnt">0 designs</span>
+    <button class="btn-zip" id="dlall" onclick="dlAll()" disabled>↓ Download All (ZIP)</button>
+  </div>
+  <div id="grid">
+    <div class="empty"><div class="ico">👕</div><p>Enter a template + values<br>and click Generate</p></div>
+  </div>
+</div>
+
+</div><!-- /panels -->
+
+<!-- MODAL -->
+<div class="mover" id="modal" onclick="closeMod(event)">
+  <div class="mcont" onclick="event.stopPropagation()">
+    <button class="mcls" onclick="closeMod()">✕</button>
+    <div class="mwrap t" id="mwrap"><canvas id="mcanv"></canvas></div>
+    <button class="btn-gen mdl" id="mdlbtn">↓ Download PNG</button>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div class="load" id="load">
+  <div class="lmsg" id="lmsg">Generating…</div>
+  <div class="pbar"><div class="pfill" id="pfill" style="width:0%"></div></div>
+  <div style="font-size:10px;color:#888;letter-spacing:1px">Please wait</div>
+</div>
+
+<script>
+// ─── CONSTANTS ───────────────────────────────────────────────
+const FONTS=[
+  {id:'Bebas Neue',  fam:'Bebas Neue'},
+  {id:'Anton',       fam:'Anton'},
+  {id:'Archivo Black',fam:'Archivo Black'},
+  {id:'Oswald',      fam:'Oswald'},
+  {id:'Playfair Display',fam:'Playfair Display'},
+  {id:'Abril Fatface',fam:'Abril Fatface'},
+  {id:'DM Serif Display',fam:'DM Serif Display'},
+  {id:'Bungee',      fam:'Bungee'},
+  {id:'Space Grotesk',fam:'Space Grotesk'},
+  {id:'Permanent Marker',fam:'Permanent Marker'},
+  {id:'Caveat',      fam:'Caveat'},
+  {id:'Fraunces',    fam:'Fraunces'},
+  {id:'Techno',      fam:'Orbitron'},
+  {id:'Blobby',      fam:'Fredoka One'},
+  {id:'Blackletter', fam:'UnifrakturMaguntia'},
+  {id:'Pixel',       fam:'Press Start 2P'},
+  {id:'Medieval',    fam:'Cinzel Decorative'},
+  {id:'Tuscan',      fam:'Rye'},
+  {id:'Not text',    fam:'Rubik Bubbles'},
+  {id:'Wacky',       fam:'Boogaloo'},
+];
+
+const EX=[
+  {n:'{hobby} is life',t:'{hobby} is life',v:'hiking\nyoga\ncooking\ngaming\nknitting\ncycling\nreading'},
+  {n:'Powered by coffee and {noun}',t:'Powered by coffee and {noun}',v:'chaos\ndreams\nnaps\nvibes\nambition'},
+  {n:'Team {name}',t:'Team {name}',v:'Taylor\nJordan\nAlex\nMorgan\nJamie'},
+  {n:'No {name} No {noun}',t:'No {name} No {noun}',v:'name,noun\ncoffee,vibes\nMonday,worries\nsun,fun'},
+  {n:'Eat. Sleep. {hobby}. Repeat.',t:'Eat. Sleep. {hobby}. Repeat.',v:'bake\ngame\nrun\nknit\ncode'},
+  {n:'Just a {decade} girl who loves {hobby}',t:'Just a {decade} girl who loves {hobby}',v:'decade,hobby\n90s,hiking\n80s,crafting\n2000s,gaming\n70s,yoga'},
+  {n:'Will {verb} for {noun}',t:'Will {verb} for {noun}',v:'verb,noun\ndance,snacks\ncode,coffee\ncraft,wine\nrun,tacos'},
+  {n:'Talk {hobby} to me',t:'Talk {hobby} to me',v:'coffee\ncats\nfood\ntravel\nplants\nbooks'},
+  {n:'{hobby} mode: ON',t:'{hobby} mode: ON',v:'vacation\nhike\nbake\ngame\ncraft'},
+  {n:"Sorry, I can't. I have {hobby} plans.",t:"Sorry, I can't. I have {hobby} plans.",v:'hiking\nyoga\nknitting\ngaming\nbaking'},
+  {n:"World's okayish {role}",t:"World's okayish {role}",v:'teacher\nparent\nchef\ncoder\ngardener'},
+  {n:'{hobby} is my freedom',t:'{hobby} is my freedom',v:'running\npainting\nreading\ntravel\ncooking'},
+  {n:"It's a {name} thing — you wouldn't understand",t:"It's a {name} thing — you wouldn't understand",v:'Taylor\nMorgan\nJordan\nAlex'},
+  {n:'Probably thinking about {noun}',t:'Probably thinking about {noun}',v:'dogs\ncoffee\nnaps\npizza\ntravel'},
+  {n:"Trust me, I'm a {profession}",t:"Trust me, I'm a {profession}",v:'nurse\nteacher\nengineer\nparent\nchef'},
+  {n:'{profession} by day, {hobby} by night',t:'{profession} by day, {hobby} by night',v:'profession,hobby\nnurse,gamer\nteacher,baker\ndev,runner\ndesigner,painter'},
+  {n:'{pet} mom',t:'{pet} mom',v:'dog\ncat\nplant\nbird\nbunny'},
+  {n:'Future {profession} in training',t:'Future {profession} in training',v:'chef\nteacher\nathlete\nartist\nengineer'},
+  {n:'Raising {noun}',t:'Raising {noun}',v:'readers\nkind humans\ndreamers\nbookworms\nathletes'},
+  {n:'Hooked on {hobby}',t:'Hooked on {hobby}',v:'crochet\ncoffee\ncats\nbooks\nrunning'},
+  {n:'Made in {year} — aged to perfection!',t:'Made in {year} — aged to perfection!',v:'1984\n1990\n1995\n2000\n2005'},
+  {n:'Behind every great {role} is a {noun}',t:'Behind every great {role} is a {noun}',v:'role,noun\nchef,sharp knife\nteacher,great student\nrunner,good playlist'},
+  {n:'Home is where the {noun} is',t:'Home is where the {noun} is',v:'dog\ncoffee\nwifi\nbooks\ncat'},
+  {n:"It's not a hobby, it's a {noun}",t:"It's not a hobby, it's a {noun}",v:'lifestyle\npassion\nvocation\ntherapy\nidentity'},
+];
+
+const PW=450,PH=540,EXP=10;
+
+// ─── STATE ────────────────────────────────────────────────────
+const S={font:'Bebas Neue',color:'#0a0a0a',bg:'t',align:'center',lineBreak:'single',letterSpacing:0,transform:'none',maxWidth:85,fontSize:80};
+let designs=[], tplSlug='design', modalIdx=-1, saved=[];
+
+// ─── FONT DROPDOWN ────────────────────────────────────────────
+function initDD(){
+  const dd=document.getElementById('fdd');
+  dd.innerHTML='';
+  FONTS.forEach(f=>{
+    const d=document.createElement('div');
+    d.className='font-opt'+(f.id===S.font?' on':'');
+    d.style.fontFamily=`'${f.fam}',sans-serif`;
+    d.textContent=f.id;
+    d.onclick=()=>pickFont(f.id);
+    dd.appendChild(d);
+  });
+}
+function toggleDD(){const d=document.getElementById('fdd');d.style.display=d.style.display==='block'?'none':'block'}
+function pickFont(id){
+  S.font=id;
+  const f=FONTS.find(x=>x.id===id);
+  const p=document.getElementById('fprev');
+  p.textContent=id; p.style.fontFamily=`'${f.fam}',sans-serif`;
+  document.querySelectorAll('.font-opt').forEach(e=>e.classList.toggle('on',e.textContent===id));
+  document.getElementById('fdd').style.display='none';
+  refresh();
+}
+document.addEventListener('click',e=>{
+  if(!e.target.closest('#mpanel')) document.getElementById('fdd').style.display='none';
+});
+
+// ─── TOGGLE HELPER ───────────────────────────────────────────
+function tset(grp,key,btn,val){
+  S[key]=val;
+  document.querySelectorAll('#'+grp+' button').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  refresh();
+}
+
+// ─── COLOR ────────────────────────────────────────────────────
+function initColors(){
+  document.querySelectorAll('.sw').forEach(b=>{
+    b.onclick=()=>{
+      S.color=b.dataset.c;
+      document.querySelectorAll('.sw').forEach(x=>x.classList.remove('on'));
+      b.classList.add('on');
+      document.getElementById('cust-c').value=S.color;
+      refresh();
+    };
+  });
+  document.getElementById('cust-c').oninput=function(){
+    S.color=this.value;
+    document.querySelectorAll('.sw').forEach(x=>x.classList.remove('on'));
+    refresh();
+  };
+}
+
+// ─── RENDERING ───────────────────────────────────────────────
+function getFam(id){return(FONTS.find(x=>x.id===id)||FONTS[0]).fam}
+
+function applyTr(t,tr){
+  if(tr==='upper')return t.toUpperCase();
+  if(tr==='lower')return t.toLowerCase();
+  return t;
+}
+
+function measLine(ctx,text,ls){
+  if(!text)return 0;
+  let w=0;
+  for(let i=0;i<text.length;i++){
+    w+=ctx.measureText(text[i]).width;
+    if(i<text.length-1)w+=ls;
+  }
+  return w;
+}
+
+function wrapText(ctx,text,maxW,ls){
+  const words=text.split(' ').filter(w=>w);
+  if(!words.length)return[text];
+  const lines=[];let cur='';
+  for(const w of words){
+    const t=cur?cur+' '+w:w;
+    if(measLine(ctx,t,ls)<=maxW){cur=t;}
+    else{if(cur)lines.push(cur);cur=w;}
+  }
+  if(cur)lines.push(cur);
+  return lines.length?lines:[text];
+}
+
+function drawLine(ctx,text,x,y,ls,align){
+  if(!text)return;
+  const tw=measLine(ctx,text,ls);
+  let sx=align==='center'?x-tw/2:align==='right'?x-tw:x;
+  for(const ch of text){
+    ctx.fillText(ch,sx,y);
+    sx+=ctx.measureText(ch).width+ls;
+  }
+}
+
+async function renderTo(canvas,text,s,forExp=false){
+  const sc=forExp?EXP:1;
+  const W=PW*sc,H=PH*sc;
+  canvas.width=W; canvas.height=H;
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+  if(!forExp){
+    if(s.bg==='w'){ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);}
+    else if(s.bg==='b'){ctx.fillStyle='#111';ctx.fillRect(0,0,W,H);}
+  }
+  const fam=getFam(s.font),fs=s.fontSize*sc,ls=s.letterSpacing*sc,maxW=W*s.maxWidth/100;
+  try{await document.fonts.load(`bold ${fs}px "${fam}"`);}catch(e){}
+  ctx.font=`bold ${fs}px "${fam}"`;
+  ctx.fillStyle=s.color;
+  ctx.textBaseline='alphabetic';
+  const dt=applyTr(text,s.transform);
+  let lines;
+  if(s.lineBreak==='word'){
+    lines=dt.split(/\s+/).filter(w=>w);
+  }else if(s.lineBreak==='two'){
+    const ws=dt.split(/\s+/).filter(w=>w);
+    if(ws.length<=1){lines=ws;}
+    else{const m=Math.ceil(ws.length/2);lines=[ws.slice(0,m).join(' '),ws.slice(m).join(' ')].filter(l=>l);}
+  }else{
+    lines=wrapText(ctx,dt,maxW,ls);
+  }
+  const mm=ctx.measureText('Ag');
+  const asc=mm.actualBoundingBoxAscent,dsc=mm.actualBoundingBoxDescent;
+  const lh=(asc+dsc)*1.35;
+  const totalH=lines.length*lh;
+  const x=s.align==='left'?W*.08:s.align==='right'?W*.92:W/2;
+  let y=(H-totalH)/2+asc;
+  for(const ln of lines){drawLine(ctx,ln,x,y,ls,s.align);y+=lh;}
+}
+
+// ─── GENERATE ────────────────────────────────────────────────
+function phs(tmpl){
+  return [...new Set((tmpl.match(/\{([^}]+)\}/g)||[]).map(m=>m.slice(1,-1).trim()))];
+}
+
+function parseCSV(text){
+  const rows=text.trim().split('\n').filter(l=>l.trim());
+  if(rows.length<2)return null;
+  const hdrs=rows[0].split(',').map(h=>h.trim().replace(/^["']|["']$/g,''));
+  const data=[];
+  for(let i=1;i<rows.length;i++){
+    const cells=rows[i].split(',').map(c=>c.trim().replace(/^["']|["']$/g,''));
+    if(cells.some(c=>c)){const r={};hdrs.forEach((h,idx)=>{r[h]=cells[idx]||'';});data.push(r);}
+  }
+  return{hdrs,data};
+}
+
+function slug(s){return s.toLowerCase().replace(/[^a-z0-9\s]/g,'').replace(/\s+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'').slice(0,50)||'design'}
+
+function parseDesigns(tmpl,vals){
+  const ps=phs(tmpl);
+  const lines=vals.trim().split('\n').filter(l=>l.trim());
+  if(!tmpl.trim())return[];
+  if(!ps.length)return[{text:tmpl,sl:slug(tmpl)}];
+  if(ps.length===1){
+    const ph=ps[0];
+    return lines.map(l=>{const v=l.trim();return v?{text:tmpl.replace(`{${ph}}`,v),sl:slug(v)}:null;}).filter(Boolean);
+  }
+  // Multi-placeholder: try CSV
+  const csv=parseCSV(vals);
+  if(csv&&csv.data.length){
+    return csv.data.map(row=>{
+      let t=tmpl;
+      ps.forEach(ph=>{
+        const k=Object.keys(row).find(k=>k.toLowerCase()===ph.toLowerCase())||ph;
+        t=t.replace(new RegExp(`\\{${ph}\\}`,'gi'),row[k]||ph);
+      });
+      return{text:t,sl:slug(Object.values(row).join('-'))};
+    });
+  }
+  // Fallback: split each line by comma
+  return lines.map(l=>{
+    const parts=l.split(',').map(p=>p.trim());
+    let t=tmpl;
+    ps.forEach((ph,i)=>{t=t.replace(`{${ph}}`,parts[i]||ph);});
+    return{text:t,sl:slug(parts.join('-'))};
+  });
+}
+
+function generate(){
+  const tmpl=document.getElementById('tmpl').value;
+  const vals=document.getElementById('vals').value;
+  if(!tmpl.trim()){alert('Please enter a template first.');return;}
+  designs=parseDesigns(tmpl,vals);
+  tplSlug=slug(tmpl.replace(/\{[^}]+\}/g,'x'));
+  renderGrid();
+}
+
+// ─── GRID ─────────────────────────────────────────────────────
+function renderGrid(){
+  const g=document.getElementById('grid');
+  const cnt=document.getElementById('gcnt');
+  const dlb=document.getElementById('dlall');
+  if(!designs.length){
+    g.innerHTML='<div class="empty"><div class="ico">⚠️</div><p>No designs generated.<br>Check template & values.</p></div>';
+    cnt.textContent='0 designs'; dlb.disabled=true; return;
+  }
+  g.innerHTML='';
+  cnt.textContent=`${designs.length} design${designs.length!==1?'s':''}`;
+  dlb.disabled=false;
+  designs.forEach((d,i)=>{
+    const card=makeCard(d,i);
+    g.appendChild(card);
+  });
+  doRefresh();
+}
+
+function makeCard(d,i){
+  const card=document.createElement('div');
+  card.className='card';
+  card.style.animationDelay=`${i*25}ms`;
+  card.onclick=()=>openMod(i);
+  const wrap=document.createElement('div');
+  wrap.className=`cwrap ${S.bg}`;
+  wrap.id=`cw${i}`;
+  const cv=document.createElement('canvas');
+  cv.className='pcv';
+  cv.id=`cv${i}`;
+  wrap.appendChild(cv);
+  const foot=document.createElement('div');
+  foot.className='cfoot';
+  const lbl=document.createElement('span');
+  lbl.className='clbl';lbl.title=d.text;lbl.textContent=d.text;
+  const dl=document.createElement('button');
+  dl.className='cdl';dl.textContent='↓ PNG';
+  dl.onclick=e=>{e.stopPropagation();dlOne(i);};
+  foot.appendChild(lbl);foot.appendChild(dl);
+  card.appendChild(wrap);card.appendChild(foot);
+  return card;
+}
+
+let rtimer=null;
+function refresh(){clearTimeout(rtimer);rtimer=setTimeout(doRefresh,60);}
+
+async function doRefresh(){
+  document.querySelectorAll('.cwrap').forEach((w,i)=>{w.className=`cwrap ${S.bg}`;});
+  const cvs=document.querySelectorAll('.pcv');
+  for(let i=0;i<cvs.length;i++){
+    await renderTo(cvs[i],designs[i].text,S,false);
+  }
+  if(modalIdx>=0)renderMod(modalIdx);
+}
+
+// ─── MODAL ────────────────────────────────────────────────────
+function openMod(i){modalIdx=i;renderMod(i);document.getElementById('modal').classList.add('show');}
+
+async function renderMod(i){
+  const d=designs[i],mc=document.getElementById('mcanv'),mw=document.getElementById('mwrap');
+  mw.className=`mwrap ${S.bg}`;
+  await renderTo(mc,d.text,S,false);
+  mc.style.width='100%';mc.style.height='auto';
+  const b=document.getElementById('mdlbtn');
+  b.textContent=`↓ Download "${d.text.slice(0,28)}${d.text.length>28?'…':''}"`;
+  b.onclick=()=>dlOne(i);
+}
+
+function closeMod(e){
+  if(!e||e.target===document.getElementById('modal')){
+    document.getElementById('modal').classList.remove('show');
+    modalIdx=-1;
+  }
+}
+
+// ─── EXPORT ──────────────────────────────────────────────────
+async function dlOne(i){
+  const d=designs[i];
+  showLoad('Exporting PNG…',50);
+  const cv=document.createElement('canvas');
+  await renderTo(cv,d.text,S,true);
+  hideLoad();
+  cv.toBlob(b=>{
+    const url=URL.createObjectURL(b);
+    const a=document.createElement('a');a.href=url;a.download=`${tplSlug}-${d.sl}.png`;a.click();URL.revokeObjectURL(url);
+  },'image/png');
+}
+
+async function dlAll(){
+  if(!designs.length)return;
+  const zip=new JSZip(),n=designs.length;
+  for(let i=0;i<n;i++){
+    showLoad(`Rendering ${i+1} of ${n}…`,Math.round(i/n*90));
+    const cv=document.createElement('canvas');
+    await renderTo(cv,designs[i].text,S,true);
+    const blob=await new Promise(r=>cv.toBlob(r,'image/png'));
+    zip.file(`${tplSlug}-${designs[i].sl}.png`,blob);
+  }
+  showLoad('Packing ZIP…',95);
+  const zb=await zip.generateAsync({type:'blob'});
+  hideLoad();
+  const url=URL.createObjectURL(zb);
+  const a=document.createElement('a');a.href=url;a.download=`${tplSlug}-designs.zip`;a.click();URL.revokeObjectURL(url);
+}
+
+function showLoad(m,p){
+  document.getElementById('load').classList.add('show');
+  document.getElementById('lmsg').textContent=m;
+  document.getElementById('pfill').style.width=p+'%';
+}
+function hideLoad(){document.getElementById('load').classList.remove('show');}
+
+// ─── SAVED TEMPLATES ─────────────────────────────────────────
+function saveTpl(){
+  const name=document.getElementById('sname').value.trim();
+  const tmpl=document.getElementById('tmpl').value.trim();
+  const vals=document.getElementById('vals').value.trim();
+  if(!name||!tmpl){alert('Enter a name and template first.');return;}
+  saved=saved.filter(x=>x.name!==name);
+  saved.push({name,tmpl,vals,S:{...S}});
+  persist();renderChips();
+  document.getElementById('sname').value='';
+}
+
+function loadTpl(name){
+  const t=saved.find(x=>x.name===name);if(!t)return;
+  document.getElementById('tmpl').value=t.tmpl;
+  document.getElementById('vals').value=t.vals;
+  if(t.S)Object.assign(S,t.S),syncUI();
+  updateHint();
+}
+
+function delTpl(name){saved=saved.filter(x=>x.name!==name);persist();renderChips();}
+
+function persist(){try{localStorage.setItem('btt2',JSON.stringify(saved));}catch(e){}}
+function load(){try{const d=localStorage.getItem('btt2');if(d)saved=JSON.parse(d);}catch(e){}renderChips();}
+
+function renderChips(){
+  const a=document.getElementById('chips');a.innerHTML='';
+  if(!saved.length){a.innerHTML='<span style="font-size:10px;color:#bbb;letter-spacing:1px">No saved templates yet</span>';return;}
+  saved.forEach(t=>{
+    const c=document.createElement('div');c.className='chip';
+    const sp=document.createElement('span');sp.textContent=t.name;sp.title='Load: '+t.name;sp.onclick=()=>loadTpl(t.name);
+    const x=document.createElement('button');x.className='x';x.textContent='✕';x.title='Delete';x.onclick=()=>delTpl(t.name);
+    c.appendChild(sp);c.appendChild(x);a.appendChild(c);
+  });
+}
+
+// ─── EXAMPLES ────────────────────────────────────────────────
+function initExamples(){
+  const sel=document.getElementById('ex-sel');
+  EX.forEach((e,i)=>{
+    const o=document.createElement('option');o.value=i;o.textContent=e.n;sel.appendChild(o);
+  });
+}
+
+function loadExample(i){
+  if(i==='')return;
+  const e=EX[+i];
+  document.getElementById('tmpl').value=e.t;
+  document.getElementById('vals').value=e.v;
+  document.getElementById('ex-sel').value='';
+  updateHint();
+}
+
+// ─── HINT ────────────────────────────────────────────────────
+function updateHint(){
+  const ps=phs(document.getElementById('tmpl').value);
+  const ph=document.getElementById('ph-hint');
+  const vh=document.getElementById('val-hint');
+  if(!ps.length){ph.textContent='(no placeholders)';vh.textContent='—one design';}
+  else if(ps.length===1){ph.textContent=`({${ps[0]}})`;vh.textContent='(one per line)';}
+  else{ph.textContent=`(${ps.length} placeholders)`;vh.textContent=`(CSV: ${ps.join(', ')})`;}
+}
+
+// ─── SYNC UI ─────────────────────────────────────────────────
+function syncUI(){
+  // font
+  const f=FONTS.find(x=>x.id===S.font)||FONTS[0];
+  const fp=document.getElementById('fprev');fp.textContent=f.id;fp.style.fontFamily=`'${f.fam}',sans-serif`;
+  document.querySelectorAll('.font-opt').forEach(e=>e.classList.toggle('on',e.textContent===f.id));
+  // color
+  document.querySelectorAll('.sw').forEach(b=>b.classList.toggle('on',b.dataset.c?.toLowerCase()===S.color.toLowerCase()));
+  document.getElementById('cust-c').value=S.color;
+  // toggles
+  [['bgtg','bg'],['altg','align'],['lbtg','lineBreak'],['trtg','transform']].forEach(([g,k])=>{
+    document.querySelectorAll('#'+g+' button').forEach(b=>b.classList.toggle('on',b.dataset.v===S[k]));
+  });
+  // sliders
+  document.getElementById('ls-r').value=S.letterSpacing;document.getElementById('ls-v').textContent=S.letterSpacing+'px';
+  document.getElementById('mw-r').value=S.maxWidth;document.getElementById('mw-v').textContent=S.maxWidth+'%';
+  document.getElementById('fs-r').value=S.fontSize;document.getElementById('fs-v').textContent=S.fontSize;
+  refresh();
+}
+
+// ─── INIT ────────────────────────────────────────────────────
+initDD();initColors();initExamples();load();
+// Load first example by default
+document.getElementById('tmpl').value=EX[0].t;
+document.getElementById('vals').value=EX[0].v;
+updateHint();
+</script>
+</body>
+</html>
